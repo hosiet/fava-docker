@@ -1,4 +1,4 @@
-ARG BEANCOUNT_VERSION=2.3.6
+ARG BEANCOUNT_VERSION=3.1.0
 ARG FAVA_VERSION=v1.30
 
 ARG NODE_BUILD_IMAGE=22-bookworm
@@ -32,7 +32,7 @@ ARG BEANCOUNT_VERSION
 
 RUN apt-get update
 RUN apt-get install -y build-essential libxml2-dev libxslt-dev curl \
-        python3 libpython3-dev python3-pip git python3-venv
+        python3 libpython3-dev python3-pip git python3-venv bison flex
 
 
 ENV PATH="/app/bin:$PATH"
@@ -49,8 +49,8 @@ RUN CFLAGS=-s pip3 install -U /tmp/build/beancount
 RUN pip3 install -U /tmp/build/fava
 ADD requirements.txt .
 RUN pip3 install --require-hashes -U -r requirements.txt
-RUN pip3 install git+https://github.com/beancount/beanprice.git@41576e2ac889e4825e4985b6f6c56aa71de28304
-RUN pip3 install git+https://github.com/andreasgerstmayr/fava-portfolio-returns.git@de68b54f3ac517adfde3a4ccb41fdb09a0da41d1
+RUN pip3 install git+https://github.com/beancount/beanprice.git@f649ae69edd5a8c7ee2618dfebd219cc0119635f
+RUN pip3 install git+https://github.com/andreasgerstmayr/fava-portfolio-returns.git@e5dc9cf913dbff2b3d5467e36b6881a1fcebcce4
 
 RUN pip3 uninstall -y pip
 
