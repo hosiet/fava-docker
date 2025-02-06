@@ -51,6 +51,7 @@ ADD requirements.txt .
 RUN pip3 install --require-hashes -U -r requirements.txt
 RUN pip3 install git+https://github.com/beancount/beanprice.git@f649ae69edd5a8c7ee2618dfebd219cc0119635f
 RUN pip3 install git+https://github.com/andreasgerstmayr/fava-portfolio-returns.git@e5dc9cf913dbff2b3d5467e36b6881a1fcebcce4
+RUN pip3 install git+https://github.com/andreasgerstmayr/fava-dashboards@0923c493c2c296ff37705f3659d4d4977c2f2b56
 
 RUN pip3 uninstall -y pip
 
