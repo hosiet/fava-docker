@@ -1,12 +1,13 @@
 ARG BEANCOUNT_VERSION=3.1.0
-ARG FAVA_VERSION=v1.30.3
+ARG FAVA_VERSION=884390341a96892b2632b1200da0e3521fd6b0cc
+# based on fava v1.30.3
 
 ARG NODE_BUILD_IMAGE=22-bookworm
 FROM node:${NODE_BUILD_IMAGE} AS node_build_env
 ARG FAVA_VERSION
 
 WORKDIR /tmp/build
-RUN git clone https://github.com/beancount/fava
+RUN git clone https://github.com/hosiet/fava
 
 RUN apt-get update
 RUN apt-get install -y python3-babel
