@@ -1,0 +1,21 @@
+# docker-compose file to build and execute the container
+#
+# Useful commands:
+#
+# * docker compose up -d --build
+# * docker compose ps
+# * docker compose logs
+# * docker compose down
+---
+services:
+  fava:
+    container_name: fava
+    image: hosiet/fava-beancount-v3:20250705
+    build: .
+    ports:
+      - 127.0.0.1:5002:5000
+    environment:
+      - BEANCOUNT_FILE=/bean/main.bean
+    volumes:
+      - ./mymoney:/bean
+    restart: unless-stopped
