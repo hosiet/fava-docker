@@ -10,7 +10,7 @@
 services:
   fava:
     container_name: fava
-    image: hosiet/fava-beancount-v3:20251001
+    image: hosiet/fava-beancount-v3:20251012
     build: .
     user: "1000:1000"
     ports:
