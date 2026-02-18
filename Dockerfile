@@ -2,7 +2,7 @@ ARG BEANCOUNT_VERSION=3.2.0
 ARG FAVA_VERSION=v1.30.12
 #ARG FAVA_VERSION=dd28e776f603728e80eddcc8cc42604458377357
 
-ARG NODE_BUILD_IMAGE=22-bookworm
+ARG NODE_BUILD_IMAGE=24-trixie
 FROM node:${NODE_BUILD_IMAGE} AS node_build_env
 ARG FAVA_VERSION
 
@@ -24,11 +24,11 @@ RUN rm -rf .*cache && \
     find . -type f -name '*.py[c0]' -delete && \
     find . -type d -name "__pycache__" -delete
 
-# Why not use `python:bookworm`? Because the final app is served by
-# distroless Python image, which is Debian + Python from Debain APT
-# repo. The python intepreter in the `python:bookworm` image is not from
+# Why not use `python:trixie`? Because the final app is served by
+# distroless Python image, which is Debian + Python from Debian APT
+# repo. The python intepreter in the `python:trixie` image is not from
 # Debian APT repo.
-FROM debian:bookworm AS build_env
+FROM debian:trixie AS build_env
 ARG BEANCOUNT_VERSION
 
 RUN apt-get update
@@ -58,7 +58,7 @@ RUN pip3 uninstall -y pip
 
 RUN find /app -name __pycache__ -exec rm -rf -v {} +
 
-FROM gcr.io/distroless/python3-debian12
+FROM gcr.io/distroless/python3-debian13
 COPY --from=build_env /app /app
 
 # Default fava port number
