@@ -1,12 +1,13 @@
 ARG BEANCOUNT_VERSION=3.2.0
-ARG FAVA_VERSION=v1.30.12
-#ARG FAVA_VERSION=dd28e776f603728e80eddcc8cc42604458377357
+#ARG FAVA_VERSION=v1.30.12
+ARG FAVA_VERSION=c9b1b7276c94d553e9caa2fa3e0c2f361f614163
 
 ARG NODE_BUILD_IMAGE=24-trixie
 FROM node:${NODE_BUILD_IMAGE} AS node_build_env
 ARG FAVA_VERSION
 
 WORKDIR /tmp/build
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 RUN git clone https://github.com/beancount/fava
 
 RUN apt-get update
