@@ -53,7 +53,7 @@ RUN git checkout ${BEANCOUNT_VERSION}
 RUN CFLAGS=-s uv pip install --no-cache -U /tmp/build/beancount
 RUN uv pip install --no-cache -U /tmp/build/fava
 ADD requirements.txt .
-RUN uv pip install --no-cache --require-hashes -U -r requirements.txt
+RUN uv pip install --no-cache -U -r requirements.txt
 RUN uv pip install --no-cache git+https://github.com/beancount/beanprice.git@ab9e0cc2f03029d5af59f5bfcea38f03e271fb3d
 RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-portfolio-returns.git@92ded75309dc033ff9356ddca65a85b98b16fed5
 RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-dashboards@26f1433b6a4cfce8ca2d801e6f30ca7bd9a167a1
