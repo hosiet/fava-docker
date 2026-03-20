@@ -1,6 +1,6 @@
 ARG BEANCOUNT_VERSION=3.2.0
 #ARG FAVA_VERSION=v1.30.12
-ARG FAVA_VERSION=c9b1b7276c94d553e9caa2fa3e0c2f361f614163
+ARG FAVA_VERSION=d677bc824f0e1a62ad0ffa05e224e35995ff4b5e
 
 ARG NODE_BUILD_IMAGE=24-trixie
 FROM node:${NODE_BUILD_IMAGE} AS node_build_env
@@ -27,17 +27,19 @@ RUN rm -rf .*cache && \
 
 # Why not use `python:trixie`? Because the final app is served by
 # distroless Python image, which is Debian + Python from Debian APT
-# repo. The python intepreter in the `python:trixie` image is not from
+# repo. The python interpreter in the `python:trixie` image is not from
 # Debian APT repo.
 FROM debian:trixie AS build_env
 ARG BEANCOUNT_VERSION
 
 RUN apt-get update
 RUN apt-get install -y build-essential libxml2-dev libxslt-dev curl \
-        python3 libpython3-dev python3-pip git python3-venv bison flex
+        python3 libpython3-dev git python3-venv bison flex
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 ENV PATH="/app/bin:$PATH"
+ENV VIRTUAL_ENV=/app
 RUN python3 -mvenv /app
 COPY --from=node_build_env /tmp/build/fava /tmp/build/fava
 
@@ -47,15 +49,13 @@ RUN git clone https://github.com/beancount/beancount
 WORKDIR /tmp/build/beancount
 RUN git checkout ${BEANCOUNT_VERSION}
 
-RUN CFLAGS=-s pip3 install -U /tmp/build/beancount
-RUN pip3 install -U /tmp/build/fava
+RUN CFLAGS=-s uv pip install --no-cache -U /tmp/build/beancount
+RUN uv pip install --no-cache -U /tmp/build/fava
 ADD requirements.txt .
-RUN pip3 install --require-hashes -U -r requirements.txt
-RUN pip3 install git+https://github.com/beancount/beanprice.git@ab9e0cc2f03029d5af59f5bfcea38f03e271fb3d
-RUN pip3 install git+https://github.com/andreasgerstmayr/fava-portfolio-returns.git@a9b0298230959db26882405fef50010e885735de
-RUN pip3 install git+https://github.com/andreasgerstmayr/fava-dashboards@88da44615106696d68a9f4a1bec923fb1c660c34
-
-RUN pip3 uninstall -y pip
+RUN uv pip install --no-cache --require-hashes -U -r requirements.txt
+RUN uv pip install --no-cache git+https://github.com/beancount/beanprice.git@ab9e0cc2f03029d5af59f5bfcea38f03e271fb3d
+RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-portfolio-returns.git@a9b0298230959db26882405fef50010e885735de
+RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-dashboards@ebbfdb620b5f65986563f3fc50d4280d410b05de
 
 RUN find /app -name __pycache__ -exec rm -rf -v {} +
 
