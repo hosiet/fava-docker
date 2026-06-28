@@ -1,6 +1,7 @@
-ARG BEANCOUNT_VERSION=3.2.0
+ARG BEANCOUNT_VERSION=3.2.3
 #ARG FAVA_VERSION=v1.30.12
-ARG FAVA_VERSION=d677bc824f0e1a62ad0ffa05e224e35995ff4b5e
+#ARG FAVA_VERSION=d677bc824f0e1a62ad0ffa05e224e35995ff4b5e
+ARG FAVA_VERSION=v1.30.14
 
 ARG NODE_BUILD_IMAGE=24-trixie
 FROM node:${NODE_BUILD_IMAGE} AS node_build_env
@@ -54,8 +55,8 @@ RUN uv pip install --no-cache -U /tmp/build/fava
 ADD requirements.txt .
 RUN uv pip install --no-cache --require-hashes -U -r requirements.txt
 RUN uv pip install --no-cache git+https://github.com/beancount/beanprice.git@ab9e0cc2f03029d5af59f5bfcea38f03e271fb3d
-RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-portfolio-returns.git@a9b0298230959db26882405fef50010e885735de
-RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-dashboards@ebbfdb620b5f65986563f3fc50d4280d410b05de
+RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-portfolio-returns.git@92ded75309dc033ff9356ddca65a85b98b16fed5
+RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-dashboards@26f1433b6a4cfce8ca2d801e6f30ca7bd9a167a1
 
 RUN find /app -name __pycache__ -exec rm -rf -v {} +
 
