@@ -1,4 +1,5 @@
-# Only the build recipe and locked dependencies belong in the context.
+# Only the build recipe and locked project metadata belong in the context.
 *
 !Dockerfile
-!requirements.txt
+!pyproject.toml
+!uv.lock

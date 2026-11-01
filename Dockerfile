@@ -8,10 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=uv /uv /usr/local/bin/uv
 FROM dependency-tools AS build
-RUN uv venv --python /usr/bin/python3 /app
-COPY requirements.txt /tmp/requirements.txt
-RUN uv pip sync --python /app/bin/python --require-hashes --only-binary :all: \
-        --no-cache /tmp/requirements.txt
+ENV UV_PROJECT_ENVIRONMENT=/app \
+    UV_PYTHON_DOWNLOADS=never
+WORKDIR /build
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev --no-build --no-cache --python /usr/bin/python3
 
 # Both stages use Debian's Python 3.13, keeping compiled wheels compatible.
 FROM gcr.io/distroless/python3-debian13@sha256:9a1ed29d41d7695245ff86bc2e08684d3dd253a3f9c8ca45677427f9f4fe3598

@@ -64,23 +64,43 @@ The Compose health check follows the initial redirect to the ledger page.
 
 Fava's wheel includes its prebuilt frontend. All runtime dependencies are
 installed from wheels, so Node, Git and a compiler are unnecessary for the
-build. The build-context allowlist includes only `Dockerfile` and
-`requirements.txt`; ledger files, attachments and repository history stay
-outside the build context.
+build. The build-context allowlist includes only `Dockerfile`,
+`pyproject.toml` and `uv.lock`; ledger files, attachments and repository history
+stay outside the build context.
 
-`requirements.in` selects application and plugin versions. `requirements.txt`
-locks all runtime dependencies with SHA-256 hashes, resolved for Python 3.13
-and manylinux 2.36-compatible amd64 wheels. To update the runtime:
+`pyproject.toml` declares the direct application and plugin dependencies and
+requires Python 3.13. `uv.lock` records the resolved runtime versions, package
+sources and archive hashes for Linux amd64. The project uses `package = false`
+because it assembles third-party software rather than installing its own
+Python package.
 
-1. Edit the selected versions in `requirements.in`.
-2. Run `./update.sh` and review the lock-file diff.
+The build runs `uv sync --locked --no-dev --no-build`: the lock must match the
+project metadata, development dependencies are omitted, and source builds
+are disabled. It selects `/usr/bin/python3` explicitly and disables automatic
+Python downloads, preserving Debian's interpreter in the distroless runtime.
+
+To change a direct dependency:
+
+1. Edit its version in `pyproject.toml`.
+2. Run `./update.sh` and review the `uv.lock` diff.
 3. Rebuild the image with `docker compose build --pull`.
 
-`update.sh` builds the Dockerfile's Debian `dependency-tools` stage, using the
-same pinned uv binary as the application build. It mounts a temporary
-directory containing only the dependency input and writes the new lock file
-on success. Running it also refreshes indirect dependencies allowed by the
-selected versions. Python and uv need not be installed on the host.
+`update.sh` uses the Dockerfile's Debian `dependency-tools` stage with the same
+pinned uv binary as the application build. It copies the project metadata and
+existing lock into a temporary directory, then replaces `uv.lock` on success.
+Python and uv need not be installed on the host. An ordinary run preserves
+existing locked versions wherever the dependency constraints still allow them.
+To explicitly refresh all allowed dependency versions, run:
+
+```sh
+./update.sh --upgrade
+```
+
+To refresh one allowed dependency, use `./update.sh --upgrade-package NAME`.
+Exact `==` constraints in `pyproject.toml` still apply. If uv is installed on the
+host with Python 3.13 available, the corresponding commands are `uv lock`,
+`uv lock --upgrade`, and `uv lock --upgrade-package NAME`. Use `uv lock --check`
+to check that the lock matches the project without changing it.
 
 The Debian build image, distroless runtime and uv image are pinned by digest.
 Refresh those digests during maintenance and keep Debian's Python minor
