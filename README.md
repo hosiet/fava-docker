@@ -1,54 +1,96 @@
 # fava-docker
 
-A Dockerfile for [beancount-fava](https://github.com/beancount/fava),
-now the default web UI for [beancount](https://github.com/beancount/beancount).
+A Debian 13 / distroless image for [Fava](https://beancount.github.io/fava/)
+and Beancount 3, with Dashboards, Portfolio Returns and ledger plugins.
+This repository maintains the `hosiet/fava-beancount-v3` image recipe.
 
-## Usage Example
+The current runtime uses Fava 1.30.16, Beancount 3.2.3, Dashboards 2.0.2 and
+Portfolio Returns 2.7.0. Python 3.13 on **Linux amd64** is the supported build
+target. The Compose and dependency-update commands select that platform
+explicitly.
 
-You can get started creating a container from this image, you can either use docker-compose or the docker cli.
+## Build and run
 
-Assuming you have `example.bean` in the current directory:
+Install Docker with the Compose plugin, then place your ledger and its
+included files under `mymoney/`, with `main.bean` as the entry point.
+Build the image locally and start the service:
 
-### Docker Cli
-
-```bash
-docker run -d \
-    --name=syncthing \
-    -v $PWD:/bean \
-    -e BEANCOUNT_FILE=/bean/example.bean \
-    -p 5000:5000 \
-    --restart unless-stopped \
-    yegle/fava
+```sh
+docker compose build --pull
+docker compose up -d --no-build --pull never
+docker compose ps
 ```
 
-### Docker Compose
+Open <http://127.0.0.1:5002>. Compose uses the local image tag
+`hosiet/fava-beancount-v3:local`; the commands above build it from this checkout.
+The container runs as UID/GID 1000 by default. Its ledger mount is writable
+for Fava's editor, document uploads and Beancount's cache, so the selected user
+must have access to that directory.
 
-```yml
----
-version: "3.0"
-services:
-  fava:
-    container_name: fava
-    image: yegle/fava
-    ports:
-      - 5000:5000
-    environment:
-      - BEANCOUNT_FILE=/bean/example.beancount
-    volumes:
-      - ${PWD}/:/bean
-    restart: unless-stopped
+Override the defaults through environment variables or an ignored `.env`:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `FAVA_IMAGE` | `hosiet/fava-beancount-v3:local` | Local image tag to build and run |
+| `FAVA_UID`, `FAVA_GID` | `1000`, `1000` | Container user and group |
+| `FAVA_PORT` | `5002` | Host port, bound to `127.0.0.1` |
+| `FAVA_LEDGER_DIR` | `./mymoney` | Host ledger directory |
+| `FAVA_LEDGER_FILE` | `main.bean` | Entry file relative to that directory |
+
+For example, to match the current user's file permissions:
+
+```sh
+export FAVA_UID="$(id -u)" FAVA_GID="$(id -g)"
+docker compose up -d --no-build --pull never
 ```
 
-## Environment Variable
+To use the Docker CLI directly:
 
-| Parameter | Value |
-| :----: | --- |
-| `BEANCOUNT_FILE` | path to your beancount file. Default to empty string. |
+```sh
+docker build --pull --platform linux/amd64 -t hosiet/fava-beancount-v3:local .
+docker run --rm --platform linux/amd64 \
+  --user "$(id -u):$(id -g)" \
+  -p 127.0.0.1:5002:5000 -v "$PWD/mymoney:/bean" \
+  -e BEANCOUNT_FILE=/bean/main.bean \
+  hosiet/fava-beancount-v3:local
+```
 
-## Note on auto build
+The image accepts Fava CLI arguments and the `BEANCOUNT_FILE` environment
+variable. `FAVA_HOST` defaults to `0.0.0.0` inside the container. For access
+from other machines, configure a reverse proxy with authentication and TLS.
+The Compose health check follows the initial redirect to the ledger page.
 
-The [docker image](https://hub.docker.com/r/yegle/fava) was switched
-from build by Docker Hub to Github Actions. The image label pattern is
-changed: instead of labeled `version-1.xx` it's now labeled `v1.xx`.
+## Build and dependency maintenance
 
-You can check the auto build logs at https://github.com/yegle/fava-docker/actions.
+Fava's wheel includes its prebuilt frontend. All runtime dependencies are
+installed from wheels, so Node, Git and a compiler are unnecessary for the
+build. The build-context allowlist includes only `Dockerfile` and
+`requirements.txt`; ledger files, attachments and repository history stay
+outside the build context.
+
+`requirements.in` selects application and plugin versions. `requirements.txt`
+locks all runtime dependencies with SHA-256 hashes, resolved for Python 3.13
+and manylinux 2.36-compatible amd64 wheels. To update the runtime:
+
+1. Edit the selected versions in `requirements.in`.
+2. Run `./update.sh` and review the lock-file diff.
+3. Rebuild the image with `docker compose build --pull`.
+
+`update.sh` builds the Dockerfile's Debian `dependency-tools` stage, using the
+same pinned uv binary as the application build. It mounts a temporary
+directory containing only the dependency input and writes the new lock file
+on success. Running it also refreshes indirect dependencies allowed by the
+selected versions. Python and uv need not be installed on the host.
+
+The Debian build image, distroless runtime and uv image are pinned by digest.
+Refresh those digests during maintenance and keep Debian's Python minor
+version aligned between the build and runtime stages. Debian build packages
+come from the configured APT repositories; retain the built image when an
+exact deployment artifact is needed.
+
+## Deployment updates
+
+Build a new image tag before changing `FAVA_IMAGE`. After switching
+with `docker compose up -d --no-build --pull never`, inspect health and logs.
+Retain the previous image tag until the deployment is accepted; rollback uses
+the previous tag and the same Compose command.

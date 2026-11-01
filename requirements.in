@@ -1,0 +1,12 @@
+# Runtime versions for the Debian 13 / Python 3.13 image.
+beancount==3.2.3
+fava==1.30.16
+beanquery==0.2.0
+beangulp==0.2.0
+beanprice==2.1.0
+beancount-reds-plugins==0.4.0
+fava-plugins==1.2
+python-dateutil==2.9.0.post0
+beancount-periodic==0.2.1
+fava-portfolio-returns==2.7.0
+fava-dashboards==2.0.2

@@ -1,73 +1,24 @@
-ARG BEANCOUNT_VERSION=3.2.3
-#ARG FAVA_VERSION=v1.30.14
-ARG FAVA_VERSION=d4835e01ebe283eb964a9a182bccb9143c26aeb3
+# syntax=docker/dockerfile:1
+# Refresh these digests deliberately when updating the runtime.
+FROM ghcr.io/astral-sh/uv:0.12.12@sha256:73d2665b478d8fa2de1cf105c6841f8e9cb6b09e568fc7700440c09f8fcd7ac4 AS uv
+FROM debian:trixie-slim@sha256:f6b08b09a05725f9431502d3b5714f5c4576e82c1a84fa1debe0c24a7e0c3ec4 AS dependency-tools
 
-ARG NODE_BUILD_IMAGE=24-trixie
-FROM node:${NODE_BUILD_IMAGE} AS node_build_env
-ARG FAVA_VERSION
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates python3 python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=uv /uv /usr/local/bin/uv
+FROM dependency-tools AS build
+RUN uv venv --python /usr/bin/python3 /app
+COPY requirements.txt /tmp/requirements.txt
+RUN uv pip sync --python /app/bin/python --require-hashes --only-binary :all: \
+        --no-cache /tmp/requirements.txt
 
-WORKDIR /tmp/build
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-RUN git clone https://github.com/beancount/fava
-
-RUN apt-get update
-RUN apt-get install -y python3-babel
-
-WORKDIR /tmp/build/fava
-RUN git checkout ${FAVA_VERSION}
-RUN make
-RUN rm -rf .*cache && \
-    rm -rf .eggs && \
-    rm -rf .tox && \
-    rm -rf build && \
-    rm -rf dist && \
-    rm -rf frontend/node_modules && \
-    find . -type f -name '*.py[c0]' -delete && \
-    find . -type d -name "__pycache__" -delete
-
-# Why not use `python:trixie`? Because the final app is served by
-# distroless Python image, which is Debian + Python from Debian APT
-# repo. The python interpreter in the `python:trixie` image is not from
-# Debian APT repo.
-FROM debian:trixie AS build_env
-ARG BEANCOUNT_VERSION
-
-RUN apt-get update
-RUN apt-get install -y build-essential libxml2-dev libxslt-dev curl \
-        python3 libpython3-dev git python3-venv bison flex
-
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-
-ENV PATH="/app/bin:$PATH"
-ENV VIRTUAL_ENV=/app
-RUN python3 -mvenv /app
-COPY --from=node_build_env /tmp/build/fava /tmp/build/fava
-
-WORKDIR /tmp/build
-RUN git clone https://github.com/beancount/beancount
-
-WORKDIR /tmp/build/beancount
-RUN git checkout ${BEANCOUNT_VERSION}
-
-RUN CFLAGS=-s uv pip install --no-cache -U /tmp/build/beancount
-RUN uv pip install --no-cache -U /tmp/build/fava
-ADD requirements.txt .
-RUN uv pip install --no-cache -U -r requirements.txt
-RUN uv pip install --no-cache git+https://github.com/beancount/beanprice.git@ab9e0cc2f03029d5af59f5bfcea38f03e271fb3d
-RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-portfolio-returns.git@92ded75309dc033ff9356ddca65a85b98b16fed5
-RUN uv pip install --no-cache git+https://github.com/andreasgerstmayr/fava-dashboards@26f1433b6a4cfce8ca2d801e6f30ca7bd9a167a1
-
-RUN find /app -name __pycache__ -exec rm -rf -v {} +
-
-FROM gcr.io/distroless/python3-debian13
-COPY --from=build_env /app /app
-
-# Default fava port number
+# Both stages use Debian's Python 3.13, keeping compiled wheels compatible.
+FROM gcr.io/distroless/python3-debian13@sha256:9a1ed29d41d7695245ff86bc2e08684d3dd253a3f9c8ca45677427f9f4fe3598
+COPY --from=build /app /app
+ENV PATH="/app/bin:$PATH" \
+    BEANCOUNT_FILE="" \
+    FAVA_HOST="0.0.0.0" \
+    PYTHONDONTWRITEBYTECODE="1"
 EXPOSE 5000
-
-ENV BEANCOUNT_FILE=""
-
-ENV FAVA_HOST="0.0.0.0"
-ENV PATH="/app/bin:$PATH"
-
-ENTRYPOINT ["fava"]
+ENTRYPOINT ["/app/bin/fava"]

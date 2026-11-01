@@ -1,22 +1,25 @@
-# docker-compose file to build and execute the container
-#
-# Useful commands:
-#
-# * docker compose up -d --build
-# * docker compose ps
-# * docker compose logs
-# * docker compose down
 ---
 services:
   fava:
-    container_name: fava
-    image: hosiet/fava-beancount-v3:2026.06.26
+    image: ${FAVA_IMAGE:-hosiet/fava-beancount-v3:local}
+    platform: linux/amd64
     build: .
-    user: "1000:1000"
+    pull_policy: never
+    user: "${FAVA_UID:-1000}:${FAVA_GID:-1000}"
     ports:
-      - 127.0.0.1:5002:5000
+      - "127.0.0.1:${FAVA_PORT:-5002}:5000"
     environment:
-      - BEANCOUNT_FILE=/bean/main.bean
+      BEANCOUNT_FILE: /bean/${FAVA_LEDGER_FILE:-main.bean}
     volumes:
-      - ./mymoney:/bean
+      - ${FAVA_LEDGER_DIR:-./mymoney}:/bean
     restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - /app/bin/python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=10).close()"
+      interval: 30s
+      timeout: 15s
+      start_period: 60s
+      retries: 3
